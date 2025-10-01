@@ -2,24 +2,24 @@
 #include <vector>
 #include <format>
 #include <iostream>
-template<typename Key, typename Value, size_t MaxLevel>
+template<typename Key, typename Value>
 concept SkipListRequires = requires (Key key1, Key key2) {
     key1 == key2;
     key1 < key2;
-} && std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value> && MaxLevel > 0;
+} && std::is_default_constructible_v<Key> && std::is_default_constructible_v<Value>;
 
 
-template<typename Key, typename Value, size_t MaxLevel>
-requires SkipListRequires<Key, Value, MaxLevel>
+template<typename Key, typename Value>
+requires SkipListRequires<Key, Value>
 class SkipList;
 
 
-template<typename Key, typename Value, size_t MaxLevel>
-std::ostream& operator<<(std::ostream& s, SkipList<Key, Value, MaxLevel>& tb) noexcept;
+template<typename Key, typename Value>
+std::ostream& operator<<(std::ostream& s, SkipList<Key, Value>& tb) noexcept;
 
 
-template<typename Key, typename Value, size_t MaxLevel>
-requires SkipListRequires<Key, Value, MaxLevel>
+template<typename Key, typename Value>
+requires SkipListRequires<Key, Value>
 class SkipList {
 private:
     template<bool Const>
@@ -30,7 +30,7 @@ public:
     using iterator = _Iterator<false>;
     using const_iterator = _Iterator<true>;
 
-    SkipList() noexcept {
+    SkipList(size_t max_level) noexcept: _head(max_level) {
         srand(time(nullptr));
     }
 
@@ -60,7 +60,7 @@ public:
 
     [[nodiscard]] const_iterator find(const Key& key) const noexcept {
         const Node* node = &_head;
-        for (int level = MaxLevel-1; level >= 0; --level) {
+        for (int level = max_level()-1; level >= 0; --level) {
             const Node* fwd;
             while ((fwd = node->forwards[level])) {
                 if (fwd->key() == key) {
@@ -82,7 +82,7 @@ public:
         }
 
         int level = 0;
-        while (level+1 < (int)MaxLevel) {
+        while (level+1 < (int)max_level()) {
             if (rand() % 2 == 0) {
                 ++level;
             } else {
@@ -90,9 +90,8 @@ public:
             }
         }
 
-        auto new_node = new Node();
+        auto new_node = new Node(level+1);
         new_node->item = { key, std::forward<Value>(value) };
-        new_node->forwards.resize(level+1);
 
         for (Node* node = &_head; level >= 0; --level) {
             Node* fwd;
@@ -114,7 +113,7 @@ public:
     iterator remove(const Key& key) noexcept {
         Node* target_node { nullptr };
         Node* node = &_head;
-        for (int level = MaxLevel-1; level >= 0; --level) {
+        for (int level = max_level()-1; level >= 0; --level) {
             Node* fwd;
             while ((fwd = node->forwards[level])) {
                 if (fwd->key() == key) {
@@ -173,18 +172,18 @@ public:
     }
 
     inline size_t max_level() const noexcept {
-        return MaxLevel;
+        return _head.forwards.size();
     }
 private:
     struct Node {
         std::pair<Key, Value> item {};
-        std::vector<Node*> forwards { MaxLevel, nullptr };
+        std::vector<Node*> forwards {};
 
-        Node() noexcept = default;
         Node(Node&&) noexcept = default;
         Node& operator=(Node&&) noexcept = default;
         Node(Node&) = delete;
         Node& operator=(Node&) = delete;
+        Node(size_t max_level) noexcept: forwards(max_level, nullptr) {};
         inline const auto& key() const noexcept { return item.first; }
         inline const auto& value() const noexcept { return item.second; }
 
@@ -243,22 +242,22 @@ private:
 };
 
 
-template<typename Key, typename Value, size_t MaxLevel>
-std::ostream& operator<<(std::ostream& s, SkipList<Key, Value, MaxLevel>& tb) noexcept {
+template<typename Key, typename Value>
+std::ostream& operator<<(std::ostream& s, SkipList<Key, Value>& tb) noexcept {
     std::string value;
-    std::array<std::string, MaxLevel> lines;
+    std::vector<std::string> lines(tb.max_level());
     auto node = tb._head.forwards[0];
     while (node) {
         for (int level = 0; level < (int)node->forwards.size(); ++level) {
             lines[level].append(std::format("|{:^9}|", node->key()));
         }
-        for (int level = node->forwards.size(); level < (int)MaxLevel; ++level) {
+        for (int level = node->forwards.size(); level < (int)tb.max_level(); ++level) {
             lines[level].append(std::string(11, ' '));
         }
         value.append(std::format("|{:^9}|", node->value()));
         node = node->forwards[0];
     }
-    for (int level = MaxLevel-1; level >= 0; --level) {
+    for (int level = tb.max_level()-1; level >= 0; --level) {
         s << std::format("level {:3}: {}\n", level+1, std::move(lines[level]));
     }
     s << std::format("value    : {}\n", std::move(value));
