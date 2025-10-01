@@ -164,7 +164,7 @@ public:
     }
 
     inline bool empty() const noexcept {
-        return _size > 0;
+        return _size == 0;
     }
 
     inline size_t size() const noexcept {
