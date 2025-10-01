@@ -224,8 +224,8 @@ private:
             return it;
         }
 
-        inline bool operator==(const _Iterator& it) const noexcept {
-            return _node == it._node;
+        inline bool operator!=(const _Iterator& it) const noexcept {
+            return _node != it._node;
         }
 
         inline operator bool() const noexcept {
