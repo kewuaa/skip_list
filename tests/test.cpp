@@ -7,7 +7,7 @@
 
 int main() {
     std::map<int, int> m;
-    SkipList<std::string, int, 3> sl;
+    SkipList<std::string, int> sl(3);
     sl["kewuaa"] = 1;
     sl.insert("1", 111);
     sl.insert("9", 999);
